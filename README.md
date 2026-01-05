@@ -2,7 +2,7 @@
 
 A web-based remote control interface for the [FNIRSI DPS-150](https://www.fnirsi.com/products/dps-150) programmable DC power supply. This project provides a modern, real-time web UI to control and monitor your power supply over USB, compiled into a standalone executable with no dependencies.
 
-Inspired by [@cho45/fnirsi-dps-150](https://github.com/cho45/fnirsi-dps-150) which connects to the DPS-150 directly over [WebSerial](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API). Unfortunately, that architecture means it can't be controlled over the internet. So I built this so that you can run this on a RaspberryPi on your bench and monitor/control it remotely. 
+Inspired by [@cho45/fnirsi-dps-150](https://github.com/cho45/fnirsi-dps-150) which connects to the DPS-150 directly over [WebSerial](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API). Unfortunately, that architecture means it can't be controlled over the internet. So I built this so that you can run this on a RaspberryPi on your bench and monitor/control it remotely.
 
 ![screenshot](./screenshot.png)
 
@@ -100,4 +100,4 @@ A significant amount of the code was written using AI Agents.
 
 ## License
 
-See LICENSE file for details.
+MIT License. See [LICENSE](LICENSE) for details.
