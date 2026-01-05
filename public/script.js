@@ -279,10 +279,6 @@ createApp({
     const lastUpdate = ref("");
     const telemetryInterval = ref(null);
 
-    const addDebug = (msg) => {
-      console.log(`[DPS-150] ${msg}`);
-    };
-
     const connect = () => {
       const wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
       socket.value = new WebSocket(wsUrl);
@@ -291,11 +287,8 @@ createApp({
       socket.value.addEventListener("open", async () => {
         wsConnected.value = true;
         protocol.value = new DPS150Protocol(socket.value);
-        addDebug("WebSocket connected");
-
         // Initialize communication
         await protocol.value.queueCommand(protocol.value.initSession());
-        addDebug("Session initialized");
 
         // Request initial state (full dump includes all values)
         await new Promise((r) => setTimeout(r, 100));
@@ -336,12 +329,11 @@ createApp({
       socket.value.addEventListener("close", () => {
         wsConnected.value = false;
         if (telemetryInterval.value) clearInterval(telemetryInterval.value);
-        addDebug("WebSocket disconnected");
         setTimeout(connect, 2000);
       });
 
       socket.value.addEventListener("error", (err) => {
-        addDebug(`WebSocket error: ${err}`);
+        console.error(`WebSocket error: ${err}`);
       });
     };
 
@@ -363,21 +355,18 @@ createApp({
         case REG_VOLTAGE_SET: // 0xC1 = 193
           if (len >= 4) {
             voltageSetpoint.value = protocol.value.decodeFloat32(data, 0);
-            addDebug(`Voltage setpoint: ${voltageSetpoint.value.toFixed(2)}V`);
           }
           break;
 
         case REG_CURRENT_SET: // 0xC2 = 194
           if (len >= 4) {
             currentLimit.value = protocol.value.decodeFloat32(data, 0);
-            addDebug(`Current setpoint: ${currentLimit.value.toFixed(2)}A`);
           }
           break;
 
         case REG_INPUT_VOLTAGE: // 0xC0 = 192
           if (len >= 4) {
             inputVoltage.value = protocol.value.decodeFloat32(data, 0);
-            addDebug(`Input voltage: ${inputVoltage.value.toFixed(1)}V`);
           }
           break;
 
@@ -386,25 +375,18 @@ createApp({
             actualVoltage.value = protocol.value.decodeFloat32(data, 0);
             actualCurrent.value = protocol.value.decodeFloat32(data, 4);
             outputPower.value = protocol.value.decodeFloat32(data, 8);
-            addDebug(
-              `Output: ${actualVoltage.value.toFixed(2)}V @ ${actualCurrent.value.toFixed(2)}A = ${
-                outputPower.value.toFixed(1)
-              }W`,
-            );
           }
           break;
 
         case REG_TEMPERATURE: // 0xC4 = 196
           if (len >= 4) {
             internalTemperature.value = protocol.value.decodeFloat32(data, 0);
-            addDebug(`Temperature: ${internalTemperature.value.toFixed(1)}°C`);
           }
           break;
 
         case REG_OUTPUT_ENABLE: // 0xDB = 219
           if (len >= 1) {
             outputEnabled.value = data[0] === 1;
-            addDebug(`Output enabled: ${outputEnabled.value}`);
           }
           break;
 
@@ -412,14 +394,12 @@ createApp({
           if (len >= 1) {
             const states = ["", "OVP", "OCP", "OPP", "OTP", "LVP"];
             status.value = states[data[0]] || "OK";
-            addDebug(`Protection: ${status.value}`);
           }
           break;
 
         case REG_MODE: // 0xDD = 221
           if (len >= 1) {
             voltageMode.value = data[0] === 0 ? "CC" : "CV";
-            addDebug(`Mode: ${voltageMode.value}`);
           }
           break;
 
@@ -435,7 +415,7 @@ createApp({
 
     const parseFullState = (data) => {
       if (data.length < 139) {
-        addDebug(`Full state incomplete: ${data.length} bytes`);
+        console.warn(`Full state incomplete: ${data.length} bytes`);
         return;
       }
 
@@ -461,28 +441,19 @@ createApp({
         status.value = states[protectionCode] || "OK";
 
         voltageMode.value = data[offset + 109] === 0 ? "CC" : "CV"; // d32
-
-        addDebug(
-          `Full state: V=${voltageSetpoint.value.toFixed(2)}V I=${
-            currentLimit.value.toFixed(2)
-          }A T=${internalTemperature.value.toFixed(1)}°C`,
-        );
       } catch (e) {
-        addDebug(`Error parsing state: ${e.message}`);
+        console.error("Error parsing full state:", e);
       }
     };
 
     const updateVoltage = async () => {
       if (protocol.value && wsConnected.value) {
-        await protocol.value.queueCommand(protocol.value.setVoltage(voltageSetpoint.value));
-        addDebug(`Set voltage: ${voltageSetpoint.value}V`);
-      }
+        await protocol.value.queueCommand(protocol.value.setVoltage(voltageSetpoint.value));      }
     };
 
     const updateCurrent = async () => {
       if (protocol.value && wsConnected.value) {
         await protocol.value.queueCommand(protocol.value.setCurrent(currentLimit.value));
-        addDebug(`Set current: ${currentLimit.value}A`);
       }
     };
 
@@ -490,7 +461,6 @@ createApp({
       if (protocol.value && wsConnected.value) {
         outputEnabled.value = !outputEnabled.value;
         await protocol.value.queueCommand(protocol.value.setOutputState(outputEnabled.value));
-        addDebug(`Output: ${outputEnabled.value ? "ON" : "OFF"}`);
       }
     };
 
