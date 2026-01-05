@@ -1,6 +1,6 @@
 # FNIRSI DPS-150 Remote Control
 
-A web-based remote control interface for the FNIRSI DPS-150 programmable DC power supply. This
+A web-based remote control interface for the [FNIRSI DPS-150](https://www.fnirsi.com/products/dps-150) programmable DC power supply. This
 project provides a modern, real-time web UI to control and monitor your power supply over USB,
 compiled into a standalone executable with no dependencies.
 
