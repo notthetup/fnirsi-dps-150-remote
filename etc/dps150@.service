@@ -1,0 +1,13 @@
+[Unit]
+Description=DPS-150 WebUI service bound to /dev/%I
+BindsTo=dev-%i.device
+After=dev-%i.device
+
+[Service]
+Type=simple
+Environment="SERIAL_PORT=/dev/%I"
+ExecStart=/usr/local/bin/fnirsi-dps-150-remote /dev/%I
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -31,10 +31,10 @@ deno task dev -- --port 8080
 deno task build
 ```
 
-The binary is written to `bin/server`. Run it with an optional port override:
+The binary is written to `bin/fnirsi-dps-150-remote`. Run it with an optional port override:
 
 ```sh
-./bin/server --port 8080
+./bin/fnirsi-dps-150-remote --port 8080
 ```
 
 ### Cross-Platform Builds
@@ -44,23 +44,18 @@ Build for specific platforms:
 ```sh
 deno task build:macos-intel    # macOS (Intel x86_64)
 deno task build:macos-arm      # macOS (Apple Silicon ARM64)
-deno task build:linux          # Linux (x86_64)
-deno task build:linux-arm      # Linux (ARM)
+deno task build:linux-intel    # Linux (x86_64)
+deno task build:linux-arm      # Linux (ARM64)
 deno task build:windows        # Windows (x86_64)
-```
-
-Build for all platforms at once:
-
-```sh
-deno task build:all
 ```
 
 Binaries will be written to:
 
-- `bin/server-macos-intel` - macOS Intel
-- `bin/server-macos-arm` - macOS Apple Silicon
-- `bin/server-linux` - Linux
-- `bin/server-windows.exe` - Windows
+- `bin/fnirsi-dps-150-remote-macos-intel` - macOS Intel
+- `bin/fnirsi-dps-150-remote-macos-arm` - macOS Apple Silicon
+- `bin/fnirsi-dps-150-remote-linux-intel` - Linux (x86_64)
+- `bin/fnirsi-dps-150-remote-linux-arm` - Linux (ARM64)
+- `bin/fnirsi-dps-150-remote-windows.exe` - Windows
 
 The compiled binary includes:
 
@@ -77,14 +72,26 @@ If auto-detection fails or you need to specify a particular port:
 
 ```bash
 # Linux/macOS
-SERIAL_PORT=/dev/ttyUSB0 ./bin/server --port 8080
+SERIAL_PORT=/dev/ttyUSB0 ./bin/fnirsi-dps-150-remote --port 8080
 
 # Windows (PowerShell)
-$env:SERIAL_PORT="COM3"; .\bin\server.exe --port 8080
+$env:SERIAL_PORT="COM3"; .\bin\fnirsi-dps-150-remote-windows.exe --port 8080
 
 # Windows (Command Prompt)
-set SERIAL_PORT=COM3 && bin\server.exe --port 8080
+set SERIAL_PORT=COM3 && bin\fnirsi-dps-150-remote-windows.exe --port 8080
 ```
+
+### Run as a systemd Service (Linux)
+
+1. Build and install the binary (for example: `sudo install -m 755 bin/fnirsi-dps-150-remote /usr/local/bin/`).
+2. Copy the service unit: `sudo cp etc/dps150@.service /etc/systemd/system/`.
+3. Copy the udev rule so the service starts when the device is plugged in: `sudo cp etc/99-dsp150-systemd.rules /etc/udev/rules.d/`.
+4. Reload udev and systemd:
+  - `sudo udevadm control --reload-rules && sudo udevadm trigger`
+  - `sudo systemctl daemon-reload`
+5. Enable and start for your serial device (replace `ttyACM0` with the actual path): `sudo systemctl enable --now dps150@ttyACM0.service`.
+
+The provided udev rule (vendor/product `2e3c:5740`) automatically starts `dps150@<device>.service` when the power supply is connected and stops it on removal.
 
 ## Credits
 

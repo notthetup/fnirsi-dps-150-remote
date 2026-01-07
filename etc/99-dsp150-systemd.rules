@@ -1,0 +1,8 @@
+# 2e3c:5740
+ACTION=="add", SUBSYSTEM=="tty", \
+  ATTRS{idVendor}=="2e3c", ATTRS{idProduct}=="5740", \
+  TAG+="systemd", ENV{SYSTEMD_WANTS}+="dps150@%k.service"
+
+ACTION=="remove", SUBSYSTEM=="tty", \
+  ATTRS{idVendor}=="2e3c", ATTRS{idProduct}=="5740", \
+  RUN+="/bin/systemctl stop dps150@%k.service"
