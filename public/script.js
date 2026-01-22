@@ -55,6 +55,11 @@ class DPS150Protocol {
   }
 
   decodeFloat32(bytes, offset = 0) {
+    // Check if there are enough bytes available
+    if (bytes.length < offset + 4) {
+      console.warn(`Not enough bytes to decode float32: need ${offset + 4}, have ${bytes.length}`);
+      return 0;
+    }
     const view = new DataView(bytes.buffer, bytes.byteOffset + offset, 4);
     return view.getFloat32(0, true);
   }
@@ -136,117 +141,180 @@ class DPS150Protocol {
 
 createApp({
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6">
-      <div class="max-w-6xl mx-auto">
+    <div class="min-h-screen bg-gradient-to-br text-white">
+      <div class="container">
         <!-- Header -->
-        <div class="mb-8">
-          <h1 class="text-4xl font-bold mb-2">DPS-150 Control</h1>
-          <p class="text-slate-400">Programmable DC Power Supply</p>
+        <div class="app-header" style="margin-bottom: 1rem;">
+          <h1 class="app-title" style="font-size: 2rem; margin-bottom: 0.25rem;">DPS-150 Control</h1>
+          <p class="app-subtitle" style="font-size: 0.875rem;">Programmable DC Power Supply Interface</p>
         </div>
 
         <!-- Connection Status -->
-        <div class="mb-6 flex items-center gap-3">
-          <div :class="['w-3 h-3 rounded-full', wsConnected ? 'bg-green-500' : 'bg-red-500']"></div>
-          <span class="text-sm">{{ wsConnected ? 'Connected' : 'Disconnected' }}</span>
+        <div class="mb-6 flex items-center gap-3" style="margin-bottom: 0.75rem;">
+          <div :class="['connection-dot', wsConnected ? 'connected' : 'disconnected']"></div>
+          <span class="text-sm font-medium" :class="wsConnected ? 'text-green-400' : 'text-red-400'">
+            {{ wsConnected ? 'Connected' : 'Disconnected' }}
+          </span>
+        </div>
+
+        <!-- Hero Section - Actual Readings -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" style="margin-bottom: 0.75rem;">
+          <!-- Actual Voltage -->
+          <div class="card card-hero">
+            <div class="display-label">Output Voltage</div>
+            <div class="flex items-baseline">
+              <span class="display-value">{{ actualVoltage.toFixed(2) }}</span>
+              <span class="display-unit">V</span>
+            </div>
+            <div class="mt-4 text-sm text-slate-400 font-mono" style="margin-top: 0.5rem; font-size: 0.75rem;">
+              Setpoint: {{ voltageSetpoint.toFixed(2) }}V
+            </div>
+          </div>
+
+          <!-- Actual Current -->
+          <div class="card card-hero">
+            <div class="display-label">Output Current</div>
+            <div class="flex items-baseline">
+              <span class="display-value">{{ actualCurrent.toFixed(3) }}</span>
+              <span class="display-unit">A</span>
+            </div>
+            <div class="mt-4 text-sm text-slate-400 font-mono" style="margin-top: 0.5rem; font-size: 0.75rem;">
+              Limit: {{ currentLimit.toFixed(2) }}A
+            </div>
+          </div>
         </div>
 
         <!-- Main Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           <!-- Control Panel -->
-          <div class="lg:col-span-2 space-y-6">
+          <div class="lg:col-span-2 space-y-6" style="gap: 0.75rem;">
 
-            <!-- Output Enable -->
-            <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-              <h2 class="text-xl font-semibold mb-4">Output Control</h2>
+            <!-- Output Control -->
+            <div class="card">
+              <h2 class="card-header">Output Control</h2>
               <button
                 @click="toggleOutput"
                 :class="[
-                  'w-full py-3 px-6 rounded-lg font-semibold text-lg transition-all',
-                  outputEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                  'w-full py-4 px-6 rounded-lg font-bold text-lg transition-all',
+                  outputEnabled ? 'btn-danger' : 'btn-success'
                 ]"
+                style="padding: 0.75rem 1.5rem; font-size: 1rem;"
               >
-                {{ outputEnabled ? 'Stop Output' : 'Start Output' }}
+                {{ outputEnabled ? '⏸ Stop Output' : '▶ Start Output' }}
               </button>
             </div>
 
             <!-- Voltage & Current Controls -->
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- Voltage Setpoint -->
-              <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <label class="block text-sm font-medium text-slate-300 mb-2">
-                  Voltage Setpoint (V)
+              <div class="card">
+                <label class="card-header">
+                  Voltage Setpoint
                 </label>
                 <input
                   v-model.number="voltageSetpoint"
                   @change="updateVoltage"
                   type="number"
                   step="0.1"
-                  class="w-full bg-slate-700 border border-slate-600 rounded px-4 py-2 text-white mb-3"
+                  class="w-full"
                 />
-                <div class="text-sm text-slate-400">
-                  Actual: <span class="text-green-400 font-semibold">{{ actualVoltage.toFixed(2) }}V</span>
+                <div class="mt-3 text-xs text-slate-400 uppercase tracking-wide">
+                  Range: 0V - 150V
                 </div>
               </div>
 
               <!-- Current Limit -->
-              <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <label class="block text-sm font-medium text-slate-300 mb-2">
-                  Current Limit (A)
+              <div class="card">
+                <label class="card-header">
+                  Current Limit
                 </label>
                 <input
                   v-model.number="currentLimit"
                   @change="updateCurrent"
                   type="number"
                   step="0.01"
-                  class="w-full bg-slate-700 border border-slate-600 rounded px-4 py-2 text-white mb-3"
+                  class="w-full"
                 />
-                <div class="text-sm text-slate-400">
-                  Actual: <span class="text-green-400 font-semibold">{{ actualCurrent.toFixed(2) }}A</span>
+                <div class="mt-3 text-xs text-slate-400 uppercase tracking-wide">
+                  Range: 0A - 15A
                 </div>
               </div>
             </div>
 
             <!-- Status Display -->
             <div class="grid grid-cols-2 gap-6">
-              <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div class="text-sm text-slate-400 mb-1">Voltage Mode</div>
-                <div class="text-2xl font-bold">{{ voltageMode }}</div>
+              <div class="card">
+                <div class="card-header">Operation Mode</div>
+                <div class="mt-2" style="margin-top: 0.5rem;">
+                  <span class="mode-badge" style="font-size: 1rem; padding: 0.25rem 0.75rem;">{{ voltageMode }}</span>
+                </div>
+                <div class="mt-3 text-xs text-slate-400" style="margin-top: 0.5rem;">
+                  {{ voltageMode === 'CC' ? 'Constant Current' : 'Constant Voltage' }}
+                </div>
               </div>
-              <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div class="text-sm text-slate-400 mb-1">Output Power</div>
-                <div class="text-2xl font-bold">{{ outputPower.toFixed(2) }}W</div>
+              <div class="card">
+                <div class="card-header">Output Power</div>
+                <div class="power-badge mt-2" style="margin-top: 0.5rem;">
+                  <span class="power-badge-value" style="font-size: 1.25rem;">{{ outputPower.toFixed(2) }}</span>
+                  <span class="power-badge-unit" style="font-size: 0.875rem;">W</span>
+                </div>
+                <div class="mt-3 text-xs text-slate-400" style="margin-top: 0.5rem;">
+                  {{ (outputPower / 1000).toFixed(3) }} kW
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Info Panel -->
-          <div class="space-y-6">
+          <div class="space-y-6" style="gap: 0.75rem;">
             <!-- General Status -->
-            <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-              <h3 class="text-lg font-semibold mb-4">Status</h3>
-              <div :class="['px-3 py-2 rounded text-center font-semibold', status === 'OK' ? 'bg-green-900 text-green-200' : 'bg-yellow-900 text-yellow-200']">
+            <div class="card">
+              <h3 class="card-header">System Status</h3>
+              <div :class="[
+                'status-indicator w-full justify-center',
+                status === 'OK' ? 'status-ok' :
+                status === 'OTP' ? 'status-error' : 'status-warning'
+              ]" style="padding: 0.375rem 1rem; font-size: 0.75rem;">
                 {{ status }}
+              </div>
+              <div class="mt-3 text-xs text-center text-slate-400" style="margin-top: 0.5rem;">
+                {{ status === 'OK' ? 'All systems operational' :
+                   status === 'OVP' ? 'Over-voltage protection' :
+                   status === 'OCP' ? 'Over-current protection' :
+                   status === 'OTP' ? 'Over-temperature protection' :
+                   status === 'OPP' ? 'Over-power protection' :
+                   status === 'LVP' ? 'Low-voltage protection' : 'Check system' }}
               </div>
             </div>
 
             <!-- Input Voltage -->
-            <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-              <div class="text-sm text-slate-400 mb-2">Input Voltage</div>
-              <div class="text-3xl font-bold">{{ inputVoltage.toFixed(1) }}V</div>
+            <div class="card">
+              <div class="card-header">Input Voltage</div>
+              <div class="metric-large text-cyan-400">{{ inputVoltage.toFixed(1) }}<span class="text-2xl text-slate-400 ml-1" style="font-size: 1.25rem;">V</span></div>
+              <div class="mt-2 text-xs text-slate-400" style="margin-top: 0.25rem;">
+                AC input supply
+              </div>
             </div>
 
             <!-- Temperature -->
-            <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
-              <div class="text-sm text-slate-400 mb-2">Temperature</div>
-              <div :class="['text-3xl font-bold', temperature > 60 ? 'text-red-400' : 'text-blue-400']">
-                {{ temperature.toFixed(1) }}°C
+            <div class="card">
+              <div class="card-header">Temperature</div>
+              <div :class="['metric-large', temperature > 60 ? 'text-red-400' : 'text-cyan-400']">
+                {{ temperature.toFixed(1) }}<span class="text-2xl text-slate-400 ml-1" style="font-size: 1.25rem;">°C</span>
+              </div>
+              <div class="mt-2 text-xs text-slate-400" style="margin-top: 0.25rem;">
+                {{ temperature > 60 ? '⚠ High temperature' : 'Internal temperature' }}
               </div>
             </div>
 
             <!-- Last Update -->
-            <div class="bg-slate-800 rounded-lg p-6 border border-slate-700 text-xs text-slate-400">
-              <div v-if="lastUpdate">Last Update: {{ lastUpdate }}</div>
+            <div class="card text-xs text-slate-400 font-mono">
+              <div class="flex items-center justify-between">
+                <span>Last Update</span>
+                <span v-if="lastUpdate" class="text-cyan-400">{{ lastUpdate }}</span>
+                <span v-else>—</span>
+              </div>
             </div>
 
           </div>
